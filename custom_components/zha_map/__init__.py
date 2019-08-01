@@ -1,12 +1,14 @@
+import asyncio
 import logging
 import os
 from datetime import timedelta
 
 from homeassistant.helpers.event import async_track_time_interval
 from homeassistant.util.json import save_json
+import zigpy.exceptions as zigpy_exc
 
 from .helpers import LogMixin
-from .neighbour import Neighbour
+from .neighbour import Neighbour, NeighbourType
 
 
 ATTR_TOPO = 'topology'
@@ -63,6 +65,7 @@ class TopologyBuilder(LogMixin):
         self._app = zha_gw
         self._in_process = None
         self._seen = {}
+        self._failed = {}
 
     async def time_tracker(self, time=None):
         """Awake periodically."""
@@ -72,10 +75,67 @@ class TopologyBuilder(LogMixin):
 
     async def build(self):
         self._seen.clear()
+        self._failed.clear()
 
         seed = self._app.application_controller.get_device(nwk=0x0000)
         self.debug("Building topology starting from coordinator")
-        nei = await Neighbour.scan_device(seed)
+        try:
+            await self.scan_device(seed)
+        except zigpy_exc.ZigbeeException as exc:
+            self.error("failed to scan %s device: %s", seed.ieee, exc)
+            return
+
+        # scan all seen if their neighbour table is empty
+        pending = [n for n in self._seen.values() if not n.neighbours and
+                   n.device_type in (NeighbourType.Coordinator.name,
+                                     NeighbourType.Router.name)]
+        while pending:
+            for nei in pending:
+                try:
+                    await nei.scan()
+                except (zigpy_exc.ZigbeeException, asyncio.TimeoutError):
+                    self.warning("Couldn't scan %s neighbours", nei.ieee)
+                    self._failed[nei.ieee] = nei
+                    continue
+                await self.process_neighbour_table(nei)
+            pending = [n for n in self._seen.values() if not n.neighbours and
+                       n.device_type in (NeighbourType.Coordinator.name,
+                                         NeighbourType.Router.name)]
+            if pending:
+                self.debug(("Finished neighbour scan pass. New neighbours were"
+                            " discovered: %s"), [n.ieee for n in pending])
+            else:
+                self.debug("Finished neighbour scan pass. Failed: %s",
+                           self._failed.keys())
+        await self.sanity_check()
+
+    async def sanity_check(self):
+        """Check discovered neighbours vs Zigpy database."""
+        # do we have extra neighbours
+        for nei in self._seen:
+            if nei not in self._app.application_controller.devices:
+                self.debug("Neighbour not in 'zigbee.db': " "%s: %s: %s",
+                           nei.device.ieee, nei.manufacturer, nei.model)
+
+        # are we missing neighbours
+        for dev in self._app.application_controller.devices.values():
+            if dev.node_desc.is_end_device or dev.ieee in self._seen:
+                continue
+
+            if dev.ieee in self._failed:
+                self.debug(("%s (%s %s) was discovered in the neighbours "
+                            "tables, but did not respond"),
+                           dev.ieee, dev.manufacturer, dev.model)
+            else:
+                self.debug(("%s (%s %s) was not found in the neighbours "
+                            "tables"), dev.ieee, dev.manufacturer, dev.model)
+
+    async def scan_device(self, device):
+        """Scan device neigbours."""
+        nei = await Neighbour.scan_device(device)
+        await self.process_neighbour_table(nei)
+
+    async def process_neighbour_table(self, nei):
         for entry in nei.neighbours:
             if entry.ieee in self._seen:
                 continue

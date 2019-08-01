@@ -4,7 +4,6 @@ import enum
 import logging
 import random
 
-import zigpy.types as t
 import zigpy.zdo.types as zdo_t
 from zigpy.exceptions import DeliveryError
 from zigpy.util import retryable
@@ -12,11 +11,6 @@ from zigpy.util import retryable
 from .helpers import LogMixin
 
 LOGGER = logging.getLogger(__name__)
-
-
-@retryable((DeliveryError, asyncio.TimeoutError), tries=5)
-def wrapper(cmd, *args, **kwargs):
-    return cmd(*args, **kwargs)
 
 
 class NeighbourType(enum.IntEnum):
@@ -122,7 +116,7 @@ class Neighbour(LogMixin):
         idx = 0
         while True:
             status, val = await self.device.zdo.request(
-                zdo_t.ZDOCmd.Mgmt_Lqi_req, idx)
+                zdo_t.ZDOCmd.Mgmt_Lqi_req, idx, tries=3, delay=1)
             self.debug("neighbor request Status: %s. Response: %r", status, val)
             if zdo_t.Status.SUCCESS != status:
                 self.debug("device does not support 'Mgmt_Lqi_req'")
