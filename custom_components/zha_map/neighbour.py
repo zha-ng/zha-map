@@ -1,0 +1,162 @@
+import attr
+import asyncio
+import enum
+import logging
+import random
+
+import zigpy.types as t
+import zigpy.zdo.types as zdo_t
+from zigpy.exceptions import DeliveryError
+from zigpy.util import retryable
+
+from .helpers import LogMixin
+
+LOGGER = logging.getLogger(__name__)
+
+
+@retryable((DeliveryError, asyncio.TimeoutError), tries=5)
+def wrapper(cmd, *args, **kwargs):
+    return cmd(*args, **kwargs)
+
+
+class NeighbourType(enum.IntEnum):
+    Coordinator = 0x0
+    Router = 0x1
+    End_Device = 0x2
+    Unknown = 0x3
+
+
+class RxOnIdle(enum.IntEnum):
+    Off = 0x0
+    On = 0x1
+    Unknown = 0x2
+
+
+class Relation(enum.IntEnum):
+    Parent = 0x0
+    Child = 0x1
+    Sibling = 0x2
+    None_of_the_above = 0x3
+    Previous_Child = 0x4
+
+
+class PermitJoins(enum.IntEnum):
+    Not_Accepting = 0x0
+    Accepting = 0x1
+    Unknown = 0x2
+
+
+@attr.s
+class Neighbour(LogMixin):
+    ieee = attr.ib(default=None)
+    nwk = attr.ib(default=None)
+    lqi = attr.ib(default=None)
+    pan_id = attr.ib(default=None)
+    device_type = attr.ib(default=None)
+    rx_on_when_idle = attr.ib(default=None)
+    relation = attr.ib(default=None)
+    new_joins_accepted = attr.ib(default=None)
+    depth = attr.ib(default=None)
+    device = attr.ib(default=None)
+    model = attr.ib(default=None)
+    manufacturer = attr.ib(default=None)
+    neighbours = attr.ib(factory=list)
+
+    @classmethod
+    def new_from_record(cls, record):
+        """Create new neighbour from a neighbour record."""
+
+        r = cls()
+        r.pan_id = str(record.PanId)
+        r.ieee = record.IEEEAddr
+
+        raw = record.NeighborType & 0x03
+        try:
+            r.device_type = NeighbourType(raw).name
+        except ValueError:
+            r.device_type = 'undefined_0x{:02x}'.format(raw)
+
+        raw = (record.NeighborType >> 2) & 0x03
+        try:
+            r.rx_on_when_idle = RxOnIdle(raw).name
+        except ValueError:
+            r.rx_on_when_idle = 'undefined_0x{:02x}'.format(raw)
+
+        raw = (record.NeighborType >> 4) & 0x07
+        try:
+            r.relation = Relation(raw).name
+        except ValueError:
+            r.relation = 'undefined_0x{:02x}'.format(raw)
+
+        raw = record.PermitJoining & 0x02
+        try:
+            r.new_joins_accepted = PermitJoins(raw).name
+        except ValueError:
+            r.new_joins_accepted = 'undefined_0x{:02x}'.format(raw)
+
+        r.depth = record.Depth
+        r.lqi = record.LQI
+        return r
+
+    def _update_info(self):
+        """Update info based on device information."""
+        if self.device is None:
+            return
+        self.nwk = '0x{:04x}'.format(self.device.nwk)
+        self.model = self.device.model
+        self.manufacturer = self.device.manufacturer
+
+    @classmethod
+    async def scan_device(cls, device):
+        """New neighbour from a scan."""
+        r = cls()
+        r.device = device
+        r.ieee = device.ieee
+        r._update_info()
+
+        await r.scan()
+        return r
+
+    async def scan(self):
+        """Scan for neighbours."""
+        idx = 0
+        while True:
+            status, val = await self.device.zdo.request(
+                zdo_t.ZDOCmd.Mgmt_Lqi_req, idx)
+            self.debug("neighbor request Status: %s. Response: %r", status, val)
+            if zdo_t.Status.SUCCESS != status:
+                self.debug("device does not support 'Mgmt_Lqi_req'")
+                return
+
+            neighbors = val.NeighborTableList
+            for neighbor in neighbors:
+                new = self.new_from_record(neighbor)
+                new.device = self.device.application.devices.get(new.ieee)
+                new._update_info()
+                self.neighbours.append(new)
+                idx += 1
+            if idx >= val.Entries:
+                break
+            await asyncio.sleep(random.uniform(1.0, 1.5))
+            self.debug("Querying next starting at %s", idx)
+
+        self.debug("Done. Total %s neighbours", len(self.neighbours))
+
+    def log(self, level, msg, *args):
+        """Log a message with level."""
+        msg = '[%s]: ' + msg
+        args = (self.device.ieee, ) + args
+        LOGGER.log(level, msg, *args)
+
+    def json(self):
+        """Return JSON representation of the neighbours table."""
+        res = []
+        for nei in sorted(self.neighbours, key=lambda x: x.ieee):
+            assert nei.ieee == nei.device.ieee
+            dict_nei = attr.asdict(
+                    nei,
+                    filter=lambda a, v: a.name not in ('device', 'neighbours')
+                )
+            dict_nei['ieee'] = str(nei.device.ieee)
+            res.append(dict_nei)
+        return res
