@@ -6,23 +6,20 @@ from datetime import timedelta
 import voluptuous as vol
 import zigpy.exceptions as zigpy_exc
 
-from homeassistant.helpers.event import (async_call_later,
-                                         async_track_time_interval)
+from homeassistant.helpers.event import async_call_later, async_track_time_interval
 from homeassistant.util.json import save_json
 
 from .helpers import LogMixin
 from .neighbour import Neighbour, NeighbourType
 
-ATTR_TOPO = 'topology'
-ATTR_OUTPUT_DIR = 'output_dir'
+ATTR_TOPO = "topology"
+ATTR_OUTPUT_DIR = "output_dir"
 AWAKE_INTERVAL = timedelta(hours=4, minutes=15)
-DOMAIN = 'zha_map'
-CONFIG_OUTPUT_DIR_NAME = 'neighbours'
+DOMAIN = "zha_map"
+CONFIG_OUTPUT_DIR_NAME = "neighbours"
 CONFIG_INITIAL_SCAN_DELAY = 20 * 60
-SERVICE_SCAN_NOW = 'scan_now'
-SERVICE_SCHEMAS = {
-    SERVICE_SCAN_NOW: vol.Schema({}),
-}
+SERVICE_SCAN_NOW = "scan_now"
+SERVICE_SCHEMAS = {SERVICE_SCAN_NOW: vol.Schema({})}
 
 LOGGER = logging.getLogger(__name__)
 
@@ -34,14 +31,12 @@ async def async_setup(hass, config):
         return True
 
     try:
-        zha_gw = hass.data['zha']['zha_gateway']
+        zha_gw = hass.data["zha"]["zha_gateway"]
     except KeyError:
         return False
 
     builder = TopologyBuilder(hass, zha_gw)
-    hass.data[DOMAIN] = {
-        ATTR_TOPO: builder,
-    }
+    hass.data[DOMAIN] = {ATTR_TOPO: builder}
     output_dir = os.path.join(hass.config.config_dir, CONFIG_OUTPUT_DIR_NAME)
     hass.data[DOMAIN][ATTR_OUTPUT_DIR] = output_dir
 
@@ -68,8 +63,11 @@ async def async_setup(hass, config):
         await builder.preempt_build()
 
     hass.services.async_register(
-        DOMAIN, SERVICE_SCAN_NOW, scan_now_handler,
-        schema=SERVICE_SCHEMAS[SERVICE_SCAN_NOW])
+        DOMAIN,
+        SERVICE_SCAN_NOW,
+        scan_now_handler,
+        schema=SERVICE_SCHEMAS[SERVICE_SCAN_NOW],
+    )
     return True
 
 
@@ -129,18 +127,26 @@ class TopologyBuilder(LogMixin):
 
     def _pending(self):
         """Return neighbours still pending a scan."""
-        pending = [n for n in self._seen.values() if not n.neighbours and
-                   n.device is not None and
-                   n.device_type in (NeighbourType.Coordinator.name,
-                                     NeighbourType.Router.name) and
-                   n.ieee not in self._failed]
+        pending = [
+            n
+            for n in self._seen.values()
+            if not n.neighbours
+            and n.device is not None
+            and n.device_type
+            in (NeighbourType.Coordinator.name, NeighbourType.Router.name)
+            and n.ieee not in self._failed
+        ]
 
         if pending:
-            self.debug("continuing neighbour scan. Neighbours discovered: %s",
-                       [n.ieee for n in pending])
+            self.debug(
+                "continuing neighbour scan. Neighbours discovered: %s",
+                [n.ieee for n in pending],
+            )
         else:
-            self.debug("Finished neighbour scan pass. Failed: %s",
-                       [k for k in self._failed.keys()])
+            self.debug(
+                "Finished neighbour scan pass. Failed: %s",
+                [k for k in self._failed.keys()],
+            )
         return pending
 
     async def sanity_check(self):
@@ -148,8 +154,12 @@ class TopologyBuilder(LogMixin):
         # do we have extra neighbours
         for nei in self._seen:
             if nei not in self._app.application_controller.devices:
-                self.debug("Neighbour not in 'zigbee.db': " "%s: %s: %s",
-                           nei.device.ieee, nei.manufacturer, nei.model)
+                self.debug(
+                    "Neighbour not in 'zigbee.db': " "%s: %s: %s",
+                    nei.device.ieee,
+                    nei.manufacturer,
+                    nei.model,
+                )
 
         # are we missing neighbours
         for dev in self._app.application_controller.devices.values():
@@ -157,12 +167,22 @@ class TopologyBuilder(LogMixin):
                 continue
 
             if dev.ieee in self._failed:
-                self.debug(("%s (%s %s) was discovered in the neighbours "
-                            "tables, but did not respond"),
-                           dev.ieee, dev.manufacturer, dev.model)
+                self.debug(
+                    (
+                        "%s (%s %s) was discovered in the neighbours "
+                        "tables, but did not respond"
+                    ),
+                    dev.ieee,
+                    dev.manufacturer,
+                    dev.model,
+                )
             else:
-                self.debug(("%s (%s %s) was not found in the neighbours "
-                            "tables"), dev.ieee, dev.manufacturer, dev.model)
+                self.debug(
+                    ("%s (%s %s) was not found in the neighbours " "tables"),
+                    dev.ieee,
+                    dev.manufacturer,
+                    dev.model,
+                )
 
     async def scan_device(self, device):
         """Scan device neigbours."""
@@ -178,11 +198,11 @@ class TopologyBuilder(LogMixin):
         await self.save_neighbours(nei)
 
     async def save_neighbours(self, nei):
-        suffix = ''.join(['%02x' % (o,) for o in nei.ieee])
-        suffix = f'_{suffix}.txt'
+        suffix = "".join(["%02x" % (o,) for o in nei.ieee])
+        suffix = f"_{suffix}.txt"
 
         file_name = os.path.join(
-            self._hass.data[DOMAIN][ATTR_OUTPUT_DIR], 'neighbours' + suffix)
+            self._hass.data[DOMAIN][ATTR_OUTPUT_DIR], "neighbours" + suffix
+        )
         self.debug("Saving %s", file_name)
-        await self._hass.async_add_executor_job(save_json,
-                                                file_name, nei.json())
+        await self._hass.async_add_executor_job(save_json, file_name, nei.json())

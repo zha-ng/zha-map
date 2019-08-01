@@ -68,25 +68,25 @@ class Neighbour(LogMixin):
         try:
             r.device_type = NeighbourType(raw).name
         except ValueError:
-            r.device_type = 'undefined_0x{:02x}'.format(raw)
+            r.device_type = "undefined_0x{:02x}".format(raw)
 
         raw = (record.NeighborType >> 2) & 0x03
         try:
             r.rx_on_when_idle = RxOnIdle(raw).name
         except ValueError:
-            r.rx_on_when_idle = 'undefined_0x{:02x}'.format(raw)
+            r.rx_on_when_idle = "undefined_0x{:02x}".format(raw)
 
         raw = (record.NeighborType >> 4) & 0x07
         try:
             r.relation = Relation(raw).name
         except ValueError:
-            r.relation = 'undefined_0x{:02x}'.format(raw)
+            r.relation = "undefined_0x{:02x}".format(raw)
 
         raw = record.PermitJoining & 0x02
         try:
             r.new_joins_accepted = PermitJoins(raw).name
         except ValueError:
-            r.new_joins_accepted = 'undefined_0x{:02x}'.format(raw)
+            r.new_joins_accepted = "undefined_0x{:02x}".format(raw)
 
         r.depth = record.Depth
         r.lqi = record.LQI
@@ -96,7 +96,7 @@ class Neighbour(LogMixin):
         """Update info based on device information."""
         if self.device is None:
             return
-        self.nwk = '0x{:04x}'.format(self.device.nwk)
+        self.nwk = "0x{:04x}".format(self.device.nwk)
         self.model = self.device.model
         self.manufacturer = self.device.manufacturer
 
@@ -116,7 +116,8 @@ class Neighbour(LogMixin):
         idx = 0
         while True:
             status, val = await self.device.zdo.request(
-                zdo_t.ZDOCmd.Mgmt_Lqi_req, idx, tries=3, delay=1)
+                zdo_t.ZDOCmd.Mgmt_Lqi_req, idx, tries=3, delay=1
+            )
             self.debug("neighbor request Status: %s. Response: %r", status, val)
             if zdo_t.Status.SUCCESS != status:
                 self.debug("device does not support 'Mgmt_Lqi_req'")
@@ -129,8 +130,7 @@ class Neighbour(LogMixin):
                     new.device = self.device.application.get_device(new.ieee)
                     new._update_info()
                 except KeyError:
-                    self.warning("neighbour %s is not in 'zigbee.db'",
-                                 new.ieee)
+                    self.warning("neighbour %s is not in 'zigbee.db'", new.ieee)
                 self.neighbours.append(new)
                 idx += 1
             if idx >= val.Entries:
@@ -142,8 +142,8 @@ class Neighbour(LogMixin):
 
     def log(self, level, msg, *args):
         """Log a message with level."""
-        msg = '[%s]: ' + msg
-        args = (self.device.ieee, ) + args
+        msg = "[%s]: " + msg
+        args = (self.device.ieee,) + args
         LOGGER.log(level, msg, *args)
 
     def json(self):
@@ -153,10 +153,8 @@ class Neighbour(LogMixin):
             if nei.device is not None:
                 assert nei.ieee == nei.device.ieee
             dict_nei = attr.asdict(
-                    nei,
-                    filter=lambda a, v: a.name not in ('device', 'neighbours')
-                )
-            dict_nei['ieee'] = ':'.join(['{:02x}'.format(b)
-                                         for b in dict_nei['ieee']])
+                nei, filter=lambda a, v: a.name not in ("device", "neighbours")
+            )
+            dict_nei["ieee"] = ":".join(["{:02x}".format(b) for b in dict_nei["ieee"]])
             res.append(dict_nei)
         return res
