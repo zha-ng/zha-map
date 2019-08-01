@@ -3,19 +3,21 @@ import logging
 import os
 from datetime import timedelta
 
-from homeassistant.helpers.event import async_track_time_interval
-from homeassistant.util.json import save_json
 import zigpy.exceptions as zigpy_exc
+
+from homeassistant.helpers.event import (async_call_later,
+                                         async_track_time_interval)
+from homeassistant.util.json import save_json
 
 from .helpers import LogMixin
 from .neighbour import Neighbour, NeighbourType
 
-
 ATTR_TOPO = 'topology'
 ATTR_OUTPUT_DIR = 'output_dir'
-AWAKE_INTERVAL = timedelta(seconds=60)
+AWAKE_INTERVAL = timedelta(hours=4, minutes=15)
 DOMAIN = 'zha_map'
 CONFIG_OUTPUT_DIR_NAME = 'neighbours'
+CONFIG_INITIAL_SCAN_DELAY = 20 * 60
 
 LOGGER = logging.getLogger(__name__)
 
@@ -50,7 +52,11 @@ async def async_setup(hass, config):
         if not await hass.async_add_executor_job(mkdir, output_dir):
             return False
 
-    async_track_time_interval(hass, builder.time_tracker, AWAKE_INTERVAL)
+    async def setup_scanner(_now):
+        async_track_time_interval(hass, builder.time_tracker, AWAKE_INTERVAL)
+        await builder.time_tracker()
+
+    async_call_later(hass, CONFIG_INITIAL_SCAN_DELAY, setup_scanner)
     return True
 
 
@@ -152,4 +158,3 @@ class TopologyBuilder(LogMixin):
         self.debug("Saving %s", file_name)
         await self._hass.async_add_executor_job(save_json,
                                                 file_name, nei.json())
-
