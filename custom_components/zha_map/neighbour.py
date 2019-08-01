@@ -125,8 +125,12 @@ class Neighbour(LogMixin):
             neighbors = val.NeighborTableList
             for neighbor in neighbors:
                 new = self.new_from_record(neighbor)
-                new.device = self.device.application.devices.get(new.ieee)
-                new._update_info()
+                try:
+                    new.device = self.device.application.get_device(new.ieee)
+                    new._update_info()
+                except KeyError:
+                    self.warning("neighbour %s is not in 'zigbee.db'",
+                                 new.ieee)
                 self.neighbours.append(new)
                 idx += 1
             if idx >= val.Entries:
@@ -146,11 +150,13 @@ class Neighbour(LogMixin):
         """Return JSON representation of the neighbours table."""
         res = []
         for nei in sorted(self.neighbours, key=lambda x: x.ieee):
-            assert nei.ieee == nei.device.ieee
+            if nei.device is not None:
+                assert nei.ieee == nei.device.ieee
             dict_nei = attr.asdict(
                     nei,
                     filter=lambda a, v: a.name not in ('device', 'neighbours')
                 )
-            dict_nei['ieee'] = str(nei.device.ieee)
+            dict_nei['ieee'] = ':'.join(['{:02x}'.format(b)
+                                         for b in dict_nei['ieee']])
             res.append(dict_nei)
         return res
