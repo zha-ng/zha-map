@@ -138,7 +138,7 @@ class Neighbour(LogMixin):
             await asyncio.sleep(random.uniform(1.0, 1.5))
             self.debug("Querying next starting at %s", idx)
 
-        self.debug("Done. Total %s neighbours", len(self.neighbours))
+        self.debug("Done scanning. Total %s neighbours", len(self.neighbours))
 
     def log(self, level, msg, *args):
         """Log a message with level."""

@@ -91,10 +91,7 @@ class TopologyBuilder(LogMixin):
             self.error("failed to scan %s device: %s", seed.ieee, exc)
             return
 
-        # scan all seen if their neighbour table is empty
-        pending = [n for n in self._seen.values() if not n.neighbours and
-                   n.device_type in (NeighbourType.Coordinator.name,
-                                     NeighbourType.Router.name)]
+        pending = self._pending()
         while pending:
             for nei in pending:
                 try:
@@ -104,16 +101,25 @@ class TopologyBuilder(LogMixin):
                     self._failed[nei.ieee] = nei
                     continue
                 await self.process_neighbour_table(nei)
-            pending = [n for n in self._seen.values() if not n.neighbours and
-                       n.device_type in (NeighbourType.Coordinator.name,
-                                         NeighbourType.Router.name)]
-            if pending:
-                self.debug(("Finished neighbour scan pass. New neighbours were"
-                            " discovered: %s"), [n.ieee for n in pending])
-            else:
-                self.debug("Finished neighbour scan pass. Failed: %s",
-                           self._failed.keys())
+            pending = self._pending()
+
         await self.sanity_check()
+
+    def _pending(self):
+        """Return neighbours still pending a scan."""
+        pending = [n for n in self._seen.values() if not n.neighbours and
+                   n.device is not None and
+                   n.device_type in (NeighbourType.Coordinator.name,
+                                     NeighbourType.Router.name) and
+                   n.ieee not in self._failed]
+
+        if pending:
+            self.debug("continuing neighbour scan. Neighbours discovered: %s",
+                       [n.ieee for n in pending])
+        else:
+            self.debug("Finished neighbour scan pass. Failed: %s",
+                       [k for k in self._failed.keys()])
+        return pending
 
     async def sanity_check(self):
         """Check discovered neighbours vs Zigpy database."""
