@@ -1,9 +1,9 @@
-import attr
 import asyncio
 import enum
 import logging
 import random
 
+import attr
 import zigpy.zdo.types as zdo_t
 from zigpy.exceptions import DeliveryError
 from zigpy.util import retryable
