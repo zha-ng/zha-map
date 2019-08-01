@@ -3,6 +3,7 @@ import logging
 import os
 from datetime import timedelta
 
+import voluptuous as vol
 import zigpy.exceptions as zigpy_exc
 
 from homeassistant.helpers.event import (async_call_later,
@@ -18,6 +19,10 @@ AWAKE_INTERVAL = timedelta(hours=4, minutes=15)
 DOMAIN = 'zha_map'
 CONFIG_OUTPUT_DIR_NAME = 'neighbours'
 CONFIG_INITIAL_SCAN_DELAY = 20 * 60
+SERVICE_SCAN_NOW = 'scan_now'
+SERVICE_SCHEMAS = {
+    SERVICE_SCAN_NOW: vol.Schema({}),
+}
 
 LOGGER = logging.getLogger(__name__)
 
@@ -57,6 +62,14 @@ async def async_setup(hass, config):
         await builder.time_tracker()
 
     async_call_later(hass, CONFIG_INITIAL_SCAN_DELAY, setup_scanner)
+
+    async def scan_now_handler(service):
+        """Scan topology right now."""
+        await builder.preempt_build()
+
+    hass.services.async_register(
+        DOMAIN, SERVICE_SCAN_NOW, scan_now_handler,
+        schema=SERVICE_SCHEMAS[SERVICE_SCAN_NOW])
     return True
 
 
@@ -71,12 +84,20 @@ class TopologyBuilder(LogMixin):
         self._app = zha_gw
         self._in_process = None
         self._seen = {}
+        self._current = {}
         self._failed = {}
 
     async def time_tracker(self, time=None):
         """Awake periodically."""
         if self._in_process and not self._in_process.done():
             return
+        self._in_process = self._hass.async_create_task(self.build())
+
+    async def preempt_build(self):
+        """Start a new scan, preempting the current one in progress."""
+        if self._in_process and not self._in_process.done():
+            self.debug("Cancelling a neighbour scan in progress")
+            self._in_process.cancel()
         self._in_process = self._hass.async_create_task(self.build())
 
     async def build(self):
@@ -104,6 +125,7 @@ class TopologyBuilder(LogMixin):
             pending = self._pending()
 
         await self.sanity_check()
+        self._current = {**self._seen}
 
     def _pending(self):
         """Return neighbours still pending a scan."""
