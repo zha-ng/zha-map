@@ -85,6 +85,11 @@ class TopologyBuilder(LogMixin):
         self._current = {}
         self._failed = {}
 
+    @property
+    def current(self):
+        """Return a dict with all Router/Coordinator devices."""
+        return self._current
+
     async def time_tracker(self, time=None):
         """Awake periodically."""
         if self._in_process and not self._in_process.done():
