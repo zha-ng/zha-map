@@ -160,10 +160,9 @@ class TopologyBuilder(LogMixin):
         for nei in self._seen:
             if nei not in self._app.application_controller.devices:
                 self.debug(
-                    "Neighbour not in 'zigbee.db': " "%s: %s: %s",
-                    nei.device.ieee,
-                    nei.manufacturer,
-                    nei.model,
+                    "Neighbour not in 'zigbee.db': " "%s - %s",
+                    nei.ieee,
+                    nei.device_type,
                 )
 
         # are we missing neighbours
@@ -183,7 +182,7 @@ class TopologyBuilder(LogMixin):
                 )
             else:
                 self.debug(
-                    ("%s (%s %s) was not found in the neighbours " "tables"),
+                    "%s (%s %s) was not found in the neighbours " "tables",
                     dev.ieee,
                     dev.manufacturer,
                     dev.model,
