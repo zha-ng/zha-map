@@ -157,4 +157,12 @@ class Neighbour(LogMixin):
             )
             dict_nei["ieee"] = ":".join(["{:02x}".format(b) for b in dict_nei["ieee"]])
             res.append(dict_nei)
-        return res
+        return {
+            "ieee": str(self.ieee),
+            "nwk": self.nwk,
+            "lqi": self.lqi,
+            "device_type": self.device_type,
+            "manufacturer": self.manufacturer,
+            "model": self.model,
+            "neighbours": res,
+        }

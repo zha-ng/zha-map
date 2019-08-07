@@ -6,6 +6,7 @@ from datetime import timedelta
 import voluptuous as vol
 import zigpy.exceptions as zigpy_exc
 
+from homeassistant.components import websocket_api
 from homeassistant.helpers.event import async_call_later, async_track_time_interval
 from homeassistant.util.json import save_json
 
@@ -13,6 +14,7 @@ from .helpers import LogMixin
 from .neighbour import Neighbour, NeighbourType
 
 ATTR_TOPO = "topology"
+ATTR_TYPE = "type"
 ATTR_OUTPUT_DIR = "output_dir"
 AWAKE_INTERVAL = timedelta(hours=4, minutes=15)
 DOMAIN = "zha_map"
@@ -31,11 +33,11 @@ async def async_setup(hass, config):
         return True
 
     try:
-        zha_gw = hass.data["zha"]["zha_gateway"]
+        zha_gateway = hass.data["zha"]["zha_gateway"]
     except KeyError:
         return False
 
-    builder = TopologyBuilder(hass, zha_gw)
+    builder = TopologyBuilder(hass, zha_gateway)
     hass.data[DOMAIN] = {ATTR_TOPO: builder}
     output_dir = os.path.join(hass.config.config_dir, CONFIG_OUTPUT_DIR_NAME)
     hass.data[DOMAIN][ATTR_OUTPUT_DIR] = output_dir
@@ -68,6 +70,18 @@ async def async_setup(hass, config):
         scan_now_handler,
         schema=SERVICE_SCHEMAS[SERVICE_SCAN_NOW],
     )
+
+    @websocket_api.require_admin
+    @websocket_api.async_response
+    @websocket_api.websocket_command({vol.Required(ATTR_TYPE): f"{DOMAIN}/devices"})
+    async def websocket_get_devices(hass, connection, msg):
+        """Get ZHA Map devices."""
+
+        response = [nei.json() for nei in builder.current.values()]
+        connection.send_result(msg["id"], response)
+
+    websocket_api.async_register_command(hass, websocket_get_devices)
+
     return True
 
 
@@ -157,10 +171,10 @@ class TopologyBuilder(LogMixin):
     async def sanity_check(self):
         """Check discovered neighbours vs Zigpy database."""
         # do we have extra neighbours
-        for nei in self._seen:
-            if nei not in self._app.application_controller.devices:
+        for nei in self._seen.values():
+            if nei.ieee not in self._app.application_controller.devices:
                 self.debug(
-                    "Neighbour not in 'zigbee.db': " "%s - %s",
+                    "Neighbour not in 'zigbee.db': %s - %s",
                     nei.ieee,
                     nei.device_type,
                 )
