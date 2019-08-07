@@ -137,6 +137,7 @@ class TopologyBuilder(LogMixin):
                 except (zigpy_exc.ZigbeeException, asyncio.TimeoutError):
                     self.warning("Couldn't scan %s neighbours", nei.ieee)
                     self._failed[nei.ieee] = nei
+                    nei.offline = True
                     continue
                 await self.process_neighbour_table(nei)
             pending = self._pending()

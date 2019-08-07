@@ -55,12 +55,14 @@ class Neighbour(LogMixin):
     model = attr.ib(default=None)
     manufacturer = attr.ib(default=None)
     neighbours = attr.ib(factory=list)
+    offline = attr.ib(factory=bool)
 
     @classmethod
     def new_from_record(cls, record):
         """Create new neighbour from a neighbour record."""
 
         r = cls()
+        r.offline = False
         r.pan_id = str(record.PanId)
         r.ieee = record.IEEEAddr
 
@@ -104,6 +106,7 @@ class Neighbour(LogMixin):
     async def scan_device(cls, device):
         """New neighbour from a scan."""
         r = cls()
+        r.offline = False
         r.device = device
         r.ieee = device.ieee
         r._update_info()
@@ -164,5 +167,6 @@ class Neighbour(LogMixin):
             "device_type": self.device_type,
             "manufacturer": self.manufacturer,
             "model": self.model,
+            "offline": self.offline,
             "neighbours": res,
         }
