@@ -182,7 +182,7 @@ class TopologyBuilder(LogMixin):
 
         # are we missing neighbours
         for dev in self._app.application_controller.devices.values():
-            if dev.node_desc.is_end_device or dev.ieee in self._seen:
+            if dev.ieee in self._seen:
                 continue
 
             if dev.ieee in self._failed:
@@ -202,6 +202,12 @@ class TopologyBuilder(LogMixin):
                     dev.manufacturer,
                     dev.model,
                 )
+                nei = Neighbour(dev.ieee, dev.nwk, 'unk')
+                nei.device = dev
+                nei.model = dev.model
+                nei.manufacturer = dev.manufacturer
+                nei.offline = True
+                self._seen[dev.ieee] = nei
 
     async def scan_device(self, device):
         """Scan device neigbours."""
