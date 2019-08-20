@@ -197,7 +197,7 @@ class TopologyBuilder(LogMixin):
                 )
             else:
                 self.debug(
-                    "%s (%s %s) was not found in the neighbours " "tables",
+                    "%s (%s %s) was not found in the neighbours tables",
                     dev.ieee,
                     dev.manufacturer,
                     dev.model,
@@ -207,6 +207,7 @@ class TopologyBuilder(LogMixin):
                 nei.model = dev.model
                 nei.manufacturer = dev.manufacturer
                 nei.offline = True
+                nei.device_type = dev.node_desc.logical_type.name
                 self._seen[dev.ieee] = nei
 
     async def scan_device(self, device):
