@@ -56,6 +56,7 @@ class Neighbour(LogMixin):
     manufacturer = attr.ib(default=None)
     neighbours = attr.ib(factory=list)
     offline = attr.ib(factory=bool)
+    supported = attr.ib(default=True)
 
     @classmethod
     def new_from_record(cls, record):
@@ -123,6 +124,7 @@ class Neighbour(LogMixin):
             )
             self.debug("neighbor request Status: %s. Response: %r", status, val)
             if zdo_t.Status.SUCCESS != status:
+                self.supported = False
                 self.debug("device does not support 'Mgmt_Lqi_req'")
                 return
 

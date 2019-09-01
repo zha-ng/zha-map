@@ -151,6 +151,7 @@ class TopologyBuilder(LogMixin):
             n
             for n in self._seen.values()
             if not n.neighbours
+            and n.supported
             and n.device is not None
             and n.device_type
             in (NeighbourType.Coordinator.name, NeighbourType.Router.name)
