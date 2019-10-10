@@ -1,6 +1,7 @@
 import asyncio
 import logging
 import os
+import time;
 from datetime import timedelta
 
 import voluptuous as vol
@@ -77,7 +78,10 @@ async def async_setup(hass, config):
     async def websocket_get_devices(hass, connection, msg):
         """Get ZHA Map devices."""
 
-        response = [nei.json() for nei in builder.current.values()]
+        response = {
+            "time": builder.timestamp,
+            "devices": [nei.json() for nei in builder.current.values()]
+            }
         connection.send_result(msg["id"], response)
 
     websocket_api.async_register_command(hass, websocket_get_devices)
@@ -98,11 +102,17 @@ class TopologyBuilder(LogMixin):
         self._seen = {}
         self._current = {}
         self._failed = {}
+        self._timestamp = 0
 
     @property
     def current(self):
         """Return a dict with all Router/Coordinator devices."""
         return self._current
+
+    @property
+    def timestamp(self):
+        """Return the timestamp of the last scan."""
+        return self._timestamp
 
     async def time_tracker(self, time=None):
         """Awake periodically."""
@@ -144,6 +154,7 @@ class TopologyBuilder(LogMixin):
 
         await self.sanity_check()
         self._current = {**self._seen}
+        self._timestamp = time.time()
 
     def _pending(self):
         """Return neighbours still pending a scan."""
