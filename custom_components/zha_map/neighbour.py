@@ -131,6 +131,12 @@ class Neighbour(LogMixin):
             neighbors = val.NeighborTableList
             for neighbor in neighbors:
                 new = self.new_from_record(neighbor)
+
+                if repr(new.ieee) == "ff:ff:ff:ff:ff:ff:ff:ff":
+                    self.debug("Ignoring invalid neighbour: %s", new.ieee)
+                    idx += 1
+                    continue
+
                 try:
                     new.device = self.device.application.get_device(new.ieee)
                     new._update_info()
