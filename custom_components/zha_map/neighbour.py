@@ -132,7 +132,8 @@ class Neighbour(LogMixin):
             for neighbor in neighbors:
                 new = self.new_from_record(neighbor)
 
-                if repr(new.ieee) == "ff:ff:ff:ff:ff:ff:ff:ff":
+                if repr(new.ieee) in ("00:00:00:00:00:00:00:00",
+                                      "ff:ff:ff:ff:ff:ff:ff:ff"):
                     self.debug("Ignoring invalid neighbour: %s", new.ieee)
                     idx += 1
                     continue
