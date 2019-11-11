@@ -46,7 +46,7 @@ class Neighbour(LogMixin):
     nwk = attr.ib(default=None)
     lqi = attr.ib(default=None)
     pan_id = attr.ib(default=None)
-    device_type = attr.ib(default=None)
+    device_type = attr.ib(default="unk")
     rx_on_when_idle = attr.ib(default=None)
     relation = attr.ib(default=None)
     new_joins_accepted = attr.ib(default=None)

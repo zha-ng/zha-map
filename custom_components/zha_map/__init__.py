@@ -219,7 +219,8 @@ class TopologyBuilder(LogMixin):
                 nei.model = dev.model
                 nei.manufacturer = dev.manufacturer
                 nei.offline = True
-                nei.device_type = dev.node_desc.logical_type.name
+                if dev.node_desc.logical_type.name is not None:
+                    nei.device_type = dev.node_desc.logical_type.name
                 self._seen[dev.ieee] = nei
 
     async def scan_device(self, device):
