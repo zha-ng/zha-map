@@ -165,9 +165,10 @@ class Neighbour(LogMixin):
             if nei.device is not None:
                 assert nei.ieee == nei.device.ieee
             dict_nei = attr.asdict(
-                nei, filter=lambda a, v: a.name not in ("device", "neighbours")
+                nei, filter=lambda a, v: a.name not in ("device", "neighbours"),
+                retain_collection_types=True
             )
-            dict_nei["ieee"] = ":".join(["{:02x}".format(b) for b in dict_nei["ieee"]])
+            dict_nei["ieee"] = str(dict_nei["ieee"])
             res.append(dict_nei)
         return {
             "ieee": str(self.ieee),

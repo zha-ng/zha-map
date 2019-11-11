@@ -236,7 +236,7 @@ class TopologyBuilder(LogMixin):
         await self.save_neighbours(nei)
 
     async def save_neighbours(self, nei):
-        suffix = "".join(["%02x" % (o,) for o in nei.ieee])
+        suffix = str(nei.ieee).replace(":", "")
         suffix = f"_{suffix}.txt"
 
         file_name = os.path.join(
