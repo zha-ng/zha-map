@@ -80,8 +80,8 @@ async def async_setup(hass, config):
 
         response = {
             "time": builder.timestamp,
-            "devices": [nei.json() for nei in builder.current.values()]
-            }
+            "devices": [nei.json() for nei in builder.current.values()],
+        }
         connection.send_result(msg["id"], response)
 
     websocket_api.async_register_command(hass, websocket_get_devices)
@@ -187,9 +187,7 @@ class TopologyBuilder(LogMixin):
         for nei in self._seen.values():
             if nei.ieee not in self._app.application_controller.devices:
                 self.debug(
-                    "Neighbour not in 'zigbee.db': %s - %s",
-                    nei.ieee,
-                    nei.device_type,
+                    "Neighbour not in 'zigbee.db': %s - %s", nei.ieee, nei.device_type
                 )
 
         # are we missing neighbours
@@ -214,7 +212,7 @@ class TopologyBuilder(LogMixin):
                     dev.manufacturer,
                     dev.model,
                 )
-                nei = Neighbour(dev.ieee, f"0x{dev.nwk:04x}", 'unk')
+                nei = Neighbour(dev.ieee, f"0x{dev.nwk:04x}", "unk")
                 nei.device = dev
                 nei.model = dev.model
                 nei.manufacturer = dev.manufacturer

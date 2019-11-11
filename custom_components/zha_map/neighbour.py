@@ -132,8 +132,10 @@ class Neighbour(LogMixin):
             for neighbor in neighbors:
                 new = self.new_from_record(neighbor)
 
-                if repr(new.ieee) in ("00:00:00:00:00:00:00:00",
-                                      "ff:ff:ff:ff:ff:ff:ff:ff"):
+                if repr(new.ieee) in (
+                    "00:00:00:00:00:00:00:00",
+                    "ff:ff:ff:ff:ff:ff:ff:ff",
+                ):
                     self.debug("Ignoring invalid neighbour: %s", new.ieee)
                     idx += 1
                     continue
@@ -165,8 +167,9 @@ class Neighbour(LogMixin):
             if nei.device is not None:
                 assert nei.ieee == nei.device.ieee
             dict_nei = attr.asdict(
-                nei, filter=lambda a, v: a.name not in ("device", "neighbours"),
-                retain_collection_types=True
+                nei,
+                filter=lambda a, v: a.name not in ("device", "neighbours"),
+                retain_collection_types=True,
             )
             dict_nei["ieee"] = str(dict_nei["ieee"])
             res.append(dict_nei)
