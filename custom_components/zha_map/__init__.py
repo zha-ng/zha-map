@@ -1,7 +1,7 @@
 import asyncio
 import logging
 import os
-import time;
+import time
 from datetime import timedelta
 
 import voluptuous as vol
@@ -214,7 +214,7 @@ class TopologyBuilder(LogMixin):
                     dev.manufacturer,
                     dev.model,
                 )
-                nei = Neighbour(dev.ieee, dev.nwk, 'unk')
+                nei = Neighbour(dev.ieee, f"0x{dev.nwk:04x}", 'unk')
                 nei.device = dev
                 nei.model = dev.model
                 nei.manufacturer = dev.manufacturer
