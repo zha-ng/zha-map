@@ -149,6 +149,10 @@ class Neighbour(LogMixin):
                 idx += 1
             if idx >= val.Entries:
                 break
+            if len(neighbors) <= 0:
+                idx += 1
+                self.debug("Neighbor count is 0 (idx : %d)", idx)
+                
             await asyncio.sleep(random.uniform(1.0, 1.5))
             self.debug("Querying next starting at %s", idx)
 
