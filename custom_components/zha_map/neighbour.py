@@ -119,13 +119,17 @@ class Neighbour(LogMixin):
         """Scan for neighbours."""
         idx = 0
         while True:
-            status, val = await self.device.zdo.request(
-                zdo_t.ZDOCmd.Mgmt_Lqi_req, idx, tries=3, delay=1
-            )
-            self.debug("neighbor request Status: %s. Response: %r", status, val)
-            if zdo_t.Status.SUCCESS != status:
-                self.supported = False
-                self.debug("device does not support 'Mgmt_Lqi_req'")
+            try:
+                status, val = await self.device.zdo.request(
+                    zdo_t.ZDOCmd.Mgmt_Lqi_req, idx, tries=3, delay=1
+                )
+                self.debug("neighbor request Status: %s. Response: %r", status, val)
+                if zdo_t.Status.SUCCESS != status:
+                    self.supported = False
+                    self.debug("device does not support 'Mgmt_Lqi_req'")
+                    return
+            except asyncio.TimeoutError:
+                self.debug("'Mgmt_Lqi_req' timedout")
                 return
 
             neighbors = val.NeighborTableList
