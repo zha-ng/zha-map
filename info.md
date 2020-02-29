@@ -25,6 +25,6 @@ zha_map:
 
 [discord]: https://https://discord.gg/sCQJcWq
 [discord-shield]: https://img.shields.io/discord/330944238910963714.svg?style=for-the-badge
-[releases-shield]: https://img.shields.io/github/release/custom-components/blueprint.svg?style=for-the-badge
+[releases-shield]: https://img.shields.io/github/release/custom-components/zha-map.svg?style=for-the-badge
 [releases]: https://github.com/zha-ng/zha-map/releases
-[license-shield]: https://img.shields.io/github/license/custom-components/blueprint.svg?style=for-the-badge
+[license-shield]: https://img.shields.io/github/license/custom-components/zha-map.svg?style=for-the-badge
