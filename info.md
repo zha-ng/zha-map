@@ -1,5 +1,5 @@
 [![GitHub Release][releases-shield]][releases]
-[![License][license-shield]](LICENSE.md)
+[![License][license-shield]](LICENSE)
 [![Discord][discord-shield]][discord]
 
 **ZHA integration: create a map of all ZHA devices.**
