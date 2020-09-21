@@ -20,26 +20,6 @@ class NeighbourType(enum.IntEnum):
     Unknown = 0x3
 
 
-class RxOnIdle(enum.IntEnum):
-    Off = 0x0
-    On = 0x1
-    Unknown = 0x2
-
-
-class Relation(enum.IntEnum):
-    Parent = 0x0
-    Child = 0x1
-    Sibling = 0x2
-    None_of_the_above = 0x3
-    Previous_Child = 0x4
-
-
-class PermitJoins(enum.IntEnum):
-    Not_Accepting = 0x0
-    Accepting = 0x1
-    Unknown = 0x2
-
-
 @attr.s
 class Neighbour(LogMixin):
     ieee = attr.ib(default=None)
@@ -64,35 +44,15 @@ class Neighbour(LogMixin):
 
         r = cls()
         r.offline = False
-        r.pan_id = str(record.PanId)
-        r.ieee = record.IEEEAddr
+        r.pan_id = str(record.extended_pan_id)
+        r.ieee = record.ieee
 
-        raw = record.NeighborType & 0x03
-        try:
-            r.device_type = NeighbourType(raw).name
-        except ValueError:
-            r.device_type = "undefined_0x{:02x}".format(raw)
-
-        raw = (record.NeighborType >> 2) & 0x03
-        try:
-            r.rx_on_when_idle = RxOnIdle(raw).name
-        except ValueError:
-            r.rx_on_when_idle = "undefined_0x{:02x}".format(raw)
-
-        raw = (record.NeighborType >> 4) & 0x07
-        try:
-            r.relation = Relation(raw).name
-        except ValueError:
-            r.relation = "undefined_0x{:02x}".format(raw)
-
-        raw = record.PermitJoining & 0x02
-        try:
-            r.new_joins_accepted = PermitJoins(raw).name
-        except ValueError:
-            r.new_joins_accepted = "undefined_0x{:02x}".format(raw)
-
-        r.depth = record.Depth
-        r.lqi = record.LQI
+        r.device_type = record.struct.device_type.name
+        r.rx_on_when_idle = record.struct.rx_on_when_idle.name
+        r.relation = record.struct.relationship.name
+        r.new_joins_accepted = record.permit_joining.name
+        r.depth = record.depth
+        r.lqi = record.lqi
         return r
 
     def _update_info(self):
@@ -119,16 +79,14 @@ class Neighbour(LogMixin):
         """Scan for neighbours."""
         idx = 0
         while True:
-            status, val = await self.device.zdo.request(
-                zdo_t.ZDOCmd.Mgmt_Lqi_req, idx, tries=3, delay=1
-            )
+            status, val = await self.device.zdo.Mgmt_Lqi_req(idx, tries=3, delay=1)
             self.debug("neighbor request Status: %s. Response: %r", status, val)
             if zdo_t.Status.SUCCESS != status:
                 self.supported = False
                 self.debug("device does not support 'Mgmt_Lqi_req'")
                 return
 
-            neighbors = val.NeighborTableList
+            neighbors = val.neighbor_table_list
             for neighbor in neighbors:
                 new = self.new_from_record(neighbor)
 
@@ -147,7 +105,7 @@ class Neighbour(LogMixin):
                     self.warning("neighbour %s is not in 'zigbee.db'", new.ieee)
                 self.neighbours.append(new)
                 idx += 1
-            if idx >= val.Entries:
+            if idx >= val.entries:
                 break
             if len(neighbors) <= 0:
                 idx += 1
