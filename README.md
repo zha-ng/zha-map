@@ -13,8 +13,9 @@ Zigbee network mapping with zha-map can help you identify weak points like bad l
 - https://github.com/zha-ng/zha-map
 2. Add zha_map: to your configuration.yaml and restart Home Assistant
 3. Wait for a scan to complete (logs to DEBUG, or use the new zha_map service to scan on demand)
-4. Install the zha-network-visualization-card lovelace card
+4. Install one of the visualization cards:
 - https://github.com/dmulcahey/zha-network-visualization-card
+- https://github.com/Samantha-uk/zigzag
 5. Add to your lovelace global config as type: module
 6. Add custom card (works best in panel mode): - type: 'custom:zha-network-visualization-card'
 
