@@ -61,6 +61,7 @@ class Neighbour(LogMixin):
         self.nwk = "0x{:04x}".format(self.device.nwk)
         self.model = self.device.model
         self.manufacturer = self.device.manufacturer
+        self.device_type = self.device.node_desc.logical_type.name
 
     @classmethod
     async def scan_device(cls, device):
