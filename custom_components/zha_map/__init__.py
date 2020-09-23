@@ -135,7 +135,10 @@ class TopologyBuilder(LogMixin):
 
         self.debug("Building topology")
         for device in self._app.application_controller.devices.values():
-            await self.scan_device(device)
+            nei = await Neighbour.scan_device(device)
+            self._seen[nei.ieee] = nei
+            if device.node_desc.logical_type in (0, 1):
+                await self.save_neighbours(nei)
 
         await self.sanity_check()
         self._current = {**self._seen}
@@ -169,19 +172,6 @@ class TopologyBuilder(LogMixin):
             if dev.node_desc.logical_type is not None:
                 nei.device_type = dev.node_desc.logical_type.name
             self._seen[dev.ieee] = nei
-
-    async def scan_device(self, device):
-        """Scan device neigbours."""
-        nei = await Neighbour.scan_device(device)
-        await self.process_neighbour_table(nei)
-
-    async def process_neighbour_table(self, nei):
-        for entry in nei.neighbours:
-            if entry.ieee in self._seen:
-                continue
-            self.debug("Adding %s to all neighbours", entry.ieee)
-            self._seen[entry.ieee] = entry
-        await self.save_neighbours(nei)
 
     async def save_neighbours(self, nei):
         suffix = str(nei.ieee).replace(":", "")
